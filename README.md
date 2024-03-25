@@ -1,4 +1,4 @@
-# unr3al_meth
+# unr3al_methvan
 
 This resource was created as a free meth script
 
@@ -11,7 +11,7 @@ This resource was created as a free meth script
 
 - Download this script
 - Put script in your `resources` directory
-- ensure `unr3al_meth` *after* `ox_lib` and `es_extended`
+- ensure `unr3al_methvan` *after* `ox_lib` and `es_extended`
 
 # Dependencies
  - ox_lib
