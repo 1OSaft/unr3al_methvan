@@ -1,7 +1,9 @@
 
-local meth, smokecolour, failedSkillcheck, Core, ptfx = 0, "exp_grd_flare", false, {}, {}
+local meth, smokecolour, failedSkillcheck, Core, ptfx, registeredContext = 0, "exp_grd_flare", false, {}, {}, false
 Core.Input = {}
 
+---Toggles Custom camera when inside Van
+---@param bool boolean
 function toggleCam(bool)
     if bool then
         local coords = GetEntityCoords(cache.ped)
@@ -44,6 +46,10 @@ RegisterNetEvent('unr3al_methvan:client:drugged', function()
 	ClearTimecycleModifier()
 end)
 
+---Opens a context and waits for its answer
+---@param minigame integer
+---@param netId integer
+---@return integer | nil
 lib.callback.register('unr3al_methvan:client:openContext', function(minigame, netId)
 	local entity = NetworkGetEntityFromNetworkId(netId)
 	if not DoesEntityExist(entity) then
@@ -62,27 +68,33 @@ lib.callback.register('unr3al_methvan:client:openContext', function(minigame, ne
 	return meth
 end)
 
+---Gets a players methtype
+---@param netId integer
+---@return table | nil
 lib.callback.register('unr3al_methvan:client:getMethType', function(netId)
-	local entity = NetworkGetEntityFromNetworkId(netId)
-	if not DoesEntityExist(entity) then
-		return
-	end
-	local options = {}
-	local i = 1
-	for methTypes in pairs(Config.Items) do
-		if methTypes ~= "EnableDifferentMethTypes" and methTypes ~= "Methlab" then
-			options[i] = { label = methTypes, value = methTypes}
-			i=i+1
-		end
-	end
-	local methType = lib.inputDialog('Meth', {
-		{type = 'select', label = 'Select meth recipe', description = 'Some input description', required = true, options = options},
-	})
-	if Config.Debug and methType then print("Meth type: "..tostring(methType[1])) end
-	TriggerEvent('unr3al_methvan:client:registerContext')
-	return methType
+    local entity = NetworkGetEntityFromNetworkId(netId)
+    if not DoesEntityExist(entity) then
+        return
+    end
+    local options = {}
+    local i = 1
+    for methTypes in pairs(Config.Items) do
+        if methTypes ~= "EnableDifferentMethTypes" and methTypes ~= "Methlab" then
+            options[i] = { label = methTypes, value = methTypes}
+            i=i+1
+        end
+    end
+    local methType = lib.inputDialog('Meth', {
+        {type = 'select', label = 'Select meth recipe', description = 'Some input description', required = true, options = options},
+    })
+    if Config.Debug and methType then print("Meth type: "..tostring(methType[1])) end
+    TriggerEvent('unr3al_methvan:client:registerContext')
+    return methType
 end)
 
+---Performs the starting Skillcheck
+---@param vehicle integer
+---@return boolean
 lib.callback.register('unr3al_methvan:client:skillcheck', function(vehicle)
 	if Config.Debug then print("Starting Skillcheck") end
 	local starting = false
@@ -111,6 +123,9 @@ lib.callback.register('unr3al_methvan:client:skillcheck', function(vehicle)
 	return starting
 end)
 
+---Create smoke over the methvan
+---@param stop boolean
+---@param netId integer
 RegisterNetEvent('unr3al_methvan:client:smoke', function(stop, netId)
 	local entity = NetworkGetEntityFromNetworkId(netId)
 	if not DoesEntityExist(entity) then
@@ -135,10 +150,14 @@ RegisterNetEvent('unr3al_methvan:client:smoke', function(stop, netId)
     SetParticleFxLoopedAlpha(ptfx[entity], 10.0)
 end)
 
+---Old notify event, needs to be replaced at some point
+---@param notitype string
+---@param message string
 RegisterNetEvent('unr3al_methvan:client:notify', function(notitype, message)
 	notifications(notitype, message, Config.Noti.time)
 end)
 
+---Stops the current production on client side
 RegisterNetEvent('unr3al_methvan:client:stop', function()
 	if (Config.Cam) then
 		toggleCam(false)
@@ -146,6 +165,12 @@ RegisterNetEvent('unr3al_methvan:client:stop', function()
 	DisplayHelpText(Locales[Config.Locale]['Production_Stoped'])
 end)
 
+---Blows the vehicle the player is in up, sync
+---@param posx integer
+---@param posy integer
+---@param posz integer
+---@param vehicle integer
+---@param netId integer
 RegisterNetEvent('unr3al_methvan:client:blowup', function(posx, posy, posz, vehicle, netId)
 	local entity = NetworkGetEntityFromNetworkId(netId)
 	local ped = PlayerPedId()

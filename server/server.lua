@@ -22,8 +22,10 @@ if (Config.StartProduction.Item.Enabled) then
 	end)
 end
 
-RegisterNetEvent('unr3al_methvan:server:stopProduction')
-AddEventHandler('unr3al_methvan:server:stopProduction', function(source, netId)
+---Stops the production on server side
+---@param source string
+---@param netId integer
+RegisterNetEvent('unr3al_methvan:server:stopProduction', function(source, netId)
 	local entity = NetworkGetEntityFromNetworkId(netId)
 	local src = source
 	if not DoesEntityExist(entity) or not methMakers[src] then
@@ -40,8 +42,9 @@ AddEventHandler('unr3al_methvan:server:stopProduction', function(source, netId)
 	methMakers[src] = nil
 end)
 
-RegisterServerEvent('unr3al_methvan:server:start')
-AddEventHandler('unr3al_methvan:server:start', function(netId)
+---Starts the production process on server side
+---@param netId string
+RegisterServerEvent('unr3al_methvan:server:start', function(netId)
 	local src = source
 	local entity = NetworkGetEntityFromNetworkId(netId)
 	local ped = GetPlayerPed(src)
@@ -60,7 +63,13 @@ AddEventHandler('unr3al_methvan:server:start', function(netId)
 		TriggerClientEvent('unr3al_methvan:client:notify', src, Config.Noti.error, Locales[Config.Locale]['Not_Enough_Cops'])
 		return
 	end
-	local input = lib.callback.await('unr3al_methvan:client:getMethType', src, netId)
+	local input
+	if not Config.Items.EnableDifferentMethTypes then
+		input = lib.callback.await('unr3al_methvan:client:getMethType', src, netId)
+	else
+		input[1] = 'Easy'
+	end
+	
 	if not input then
 		return
 	end
@@ -118,9 +127,10 @@ AddEventHandler('unr3al_methvan:server:start', function(netId)
 	end
 end)
 
-
-RegisterServerEvent('unr3al_methvan:server:blow')
-AddEventHandler('unr3al_methvan:server:blow', function(source, netId)
+---Blows up a vehicle
+---@param source string
+---@param netId integer
+RegisterServerEvent('unr3al_methvan:server:blow', function(source, netId)
 	local src = source
 	local entity = NetworkGetEntityFromNetworkId(netId)
 	local pos = GetEntityCoords(entity)
@@ -152,83 +162,11 @@ AddEventHandler('unr3al_methvan:server:blow', function(source, netId)
 	end
 end)
 
-RegisterNetEvent('unr3al_methvan:server:production')
-AddEventHandler('unr3al_methvan:server:production', function(source, netId)
-	local src = source
-	local entity = NetworkGetEntityFromNetworkId(netId)
-	local ped = GetPlayerPed(src)
-
-	if Config.Debug then print(methMakers[src]) end
-
-	while (methMakers[src]) do
-		Wait(10)
-		if Config.Debug then print('Entity Model: '..GetEntityModel(entity)) end
-		if (DoesEntityExist(entity) and GetEntityModel(methMakers[src].vehicle) == `journey`) and GetVehiclePedIsIn(ped, false) ~= 0 then
-			TriggerEvent('unr3al_methvan:server:smoke', source, netId)
-			if (not methMakers[src].paused) then
-				methMakers[src].quality += 1
-				TriggerClientEvent('unr3al_methvan:client:notify', src, Config.Noti.info, Locales[Config.Locale]['Update1'] .. methMakers[src].progress .. Locales[Config.Locale]['Update2'])
-			end
-		else
-			if Config.Debug then print('Stopped because not in vehicle') end
-			TriggerEvent('unr3al_methvan:server:stopProduction', src, netId)
-			return
-		end
-		if (methMakers[src].progress < 95) then
-			Citizen.Wait(Config.PauseTime)
-			if Config.Debug then print('Paused state: '..tostring(methMakers[src].paused)) end
-			if not methMakers[src].paused and GetVehiclePedIsIn(ped, false) ~= 0 then
-				
-
-				local Percent = math.random(Config.Progress.Min, Config.Progress.Max)
-				methMakers[src].progress += Percent
-				MiniGamePercentage = math.random(1, Config.ChangeMiniGame)
-				if Config.Debug then print("Minigame Chance: "..MiniGamePercentage) end
-			end
-			if (not methMakers[src].paused and methMakers[src].progress > 10 and methMakers[src].progress < 95 and MiniGamePercentage == 1 and methMakers[src]) then
-				methMakers[src].paused = true
-				local MiniGame = math.random(1,8)
-				local tempquality = lib.callback.await('unr3al_methvan:client:openContext', src, MiniGame, netId)
-				if methMakers[src] ~= nil then
-					methMakers[src].quality = methMakers[src].quality + tempquality
-					methMakers[src].paused = false
-				end
-			end
-		else
-			TriggerClientEvent('unr3al_methvan:client:notify', src, Config.Noti.success, Locales[Config.Locale]['Production_Finish'], Config.Noti.time)
-
-			if Config.Debug then print('Quality: '..methMakers[src].quality) end
-			TriggerEvent('unr3al_methvan:server:finish', source, methMakers[src].quality, netId)
-			return
-		end
-	end
-end)
-
-RegisterServerEvent('unr3al_methvan:server:smoke')
-AddEventHandler('unr3al_methvan:server:smoke', function(source, netId)
-	local src = source
-	local Player = ESX.GetPlayerFromId(src)
-	local entity = NetworkGetEntityFromNetworkId(netId)
-	local pos = GetEntityCoords(entity)
-
-    if not methMakers[src] or not DoesEntityExist(entity) then
-        return
-    end
-	
-	if Player.getInventoryItem(Config.Items.Methlab).count >= 1 then
-		local Players = ESX.GetExtendedPlayers()
-
-		for k, Player in pairs(Players) do
-			TriggerClientEvent('unr3al_methvan:client:smoke', Player.source, false, netId)
-		end
-	else
-		methMakers[src] = nil
-		TriggerEvent('unr3al_methvan:server:stopProduction', src, netId)
-	end
-end)
-
-RegisterServerEvent('unr3al_methvan:server:finish')
-AddEventHandler('unr3al_methvan:server:finish', function(source, methAmount, netId)
+---gives out the meth after finishing production
+---@param source any
+---@param methAmount any
+---@param netId any
+local function finishProduction(source, methAmount, netId)
 	local src = source
 	local Player = ESX.GetPlayerFromId(src)
 
@@ -284,18 +222,86 @@ AddEventHandler('unr3al_methvan:server:finish', function(source, methAmount, net
 		print("MISSING LOG TYPE")
 	end
 	TriggerEvent('unr3al_methvan:server:stopProduction', src, netId)
+end
+
+---Production loop
+---@param source string
+---@param netId integer
+RegisterNetEvent('unr3al_methvan:server:production', function(source, netId)
+	local src = source
+	local entity = NetworkGetEntityFromNetworkId(netId)
+	local ped = GetPlayerPed(src)
+
+	if Config.Debug then print(methMakers[src]) end
+
+	while (methMakers[src]) do
+		Wait(10)
+		if Config.Debug then print('Entity Model: '..GetEntityModel(entity)) end
+		if (DoesEntityExist(entity) and GetEntityModel(methMakers[src].vehicle) == `journey`) and GetVehiclePedIsIn(ped, false) ~= 0 then
+			TriggerEvent('unr3al_methvan:server:smoke', source, netId)
+			if (not methMakers[src].paused) then
+				methMakers[src].quality += 1
+				TriggerClientEvent('unr3al_methvan:client:notify', src, Config.Noti.info, Locales[Config.Locale]['Update1'] .. methMakers[src].progress .. Locales[Config.Locale]['Update2'])
+			end
+		else
+			if Config.Debug then print('Stopped because not in vehicle') end
+			TriggerEvent('unr3al_methvan:server:stopProduction', src, netId)
+			return
+		end
+		if (methMakers[src].progress < 95) then
+			Citizen.Wait(Config.PauseTime)
+			if Config.Debug then print('Paused state: '..tostring(methMakers[src].paused)) end
+			if not methMakers[src].paused and GetVehiclePedIsIn(ped, false) ~= 0 then
+				
+
+				local Percent = math.random(Config.Progress.Min, Config.Progress.Max)
+				methMakers[src].progress += Percent
+				MiniGamePercentage = math.random(1, Config.ChangeMiniGame)
+				if Config.Debug then print("Minigame Chance: "..MiniGamePercentage) end
+			end
+			if (not methMakers[src].paused and methMakers[src].progress > 10 and methMakers[src].progress < 95 and MiniGamePercentage == 1 and methMakers[src]) then
+				methMakers[src].paused = true
+				local MiniGame = math.random(1,8)
+				local tempquality = lib.callback.await('unr3al_methvan:client:openContext', src, MiniGame, netId)
+				if methMakers[src] ~= nil then
+					methMakers[src].quality = methMakers[src].quality + tempquality
+					methMakers[src].paused = false
+				end
+			end
+		else
+			TriggerClientEvent('unr3al_methvan:client:notify', src, Config.Noti.success, Locales[Config.Locale]['Production_Finish'], Config.Noti.time)
+
+			if Config.Debug then print('Quality: '..methMakers[src].quality) end
+			finishProduction(source, methMakers[src].quality, netId)
+			return
+		end
+	end
 end)
 
+---Syncs smoke for all clients
+---@param source string
+---@param netId integer
+RegisterServerEvent('unr3al_methvan:server:smoke', function(source, netId)
+	local src = source
+	local Player = ESX.GetPlayerFromId(src)
+	local entity = NetworkGetEntityFromNetworkId(netId)
+	local pos = GetEntityCoords(entity)
 
+    if not methMakers[src] or not DoesEntityExist(entity) then
+        return
+    end
+	
+	if Player.getInventoryItem(Config.Items.Methlab).count >= 1 then
+		local Players = ESX.GetExtendedPlayers()
 
-
-
-
-
-
-
-
-
+		for k, Player in pairs(Players) do
+			TriggerClientEvent('unr3al_methvan:client:smoke', Player.source, false, netId)
+		end
+	else
+		methMakers[src] = nil
+		TriggerEvent('unr3al_methvan:server:stopProduction', src, netId)
+	end
+end)
 
 
 if Config.LogType == 'discord' then
