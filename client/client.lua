@@ -2,6 +2,13 @@
 local meth, smokecolour, failedSkillcheck, Core, ptfx, registeredContext = 0, "exp_grd_flare", false, {}, {}, false
 Core.Input = {}
 
+---@param xPlayer table
+---@param isNew boolean
+---@param skin table
+RegisterNetEvent('esx:playerLoaded',function(xPlayer, isNew, skin)
+	TriggerEvent('unr3al_methvan:client:registerContext')
+end)
+
 ---Toggles Custom camera when inside Van
 ---@param bool boolean
 function toggleCam(bool)
@@ -88,7 +95,6 @@ lib.callback.register('unr3al_methvan:client:getMethType', function(netId)
         {type = 'select', label = 'Select meth recipe', description = 'Some input description', required = true, options = options},
     })
     if Config.Debug and methType then print("Meth type: "..tostring(methType[1])) end
-    TriggerEvent('unr3al_methvan:client:registerContext')
     return methType
 end)
 
