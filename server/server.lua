@@ -63,7 +63,7 @@ RegisterServerEvent('unr3al_methvan:server:start', function(netId)
 		TriggerClientEvent('unr3al_methvan:client:notify', src, Config.Noti.error, Locales[Config.Locale]['Not_Enough_Cops'])
 		return
 	end
-	local input
+	local input = {}
 	if not Config.Items.EnableDifferentMethTypes then
 		input = lib.callback.await('unr3al_methvan:client:getMethType', src, netId)
 	else
