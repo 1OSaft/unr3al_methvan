@@ -2,13 +2,6 @@
 local meth, smokecolour, failedSkillcheck, Core, ptfx, registeredContext = 0, "exp_grd_flare", false, {}, {}, false
 Core.Input = {}
 
----@param xPlayer table
----@param isNew boolean
----@param skin table
-RegisterNetEvent('esx:playerLoaded',function(xPlayer, isNew, skin)
-	TriggerEvent('unr3al_methvan:client:registerContext')
-end)
-
 ---Toggles Custom camera when inside Van
 ---@param bool boolean
 function toggleCam(bool)
@@ -61,6 +54,9 @@ lib.callback.register('unr3al_methvan:client:openContext', function(minigame, ne
 	local entity = NetworkGetEntityFromNetworkId(netId)
 	if not DoesEntityExist(entity) then
 		return
+	end
+	if not registeredContext then
+		registerContext()
 	end
 	meth = 0
 	lib.showContext('Event_0'..minigame)
@@ -202,7 +198,8 @@ RegisterNetEvent('unr3al_methvan:client:blowup', function(posx, posy, posz, vehi
 	StopParticleFxLooped(fire, 0)
 end)
 
-RegisterNetEvent('unr3al_methvan:client:registerContext', function()
+function registerContext()
+	print("Registering Context")
 	lib.registerContext({
 		id = 'Event_01',
 		title = Locales[Config.Locale]['Question_01'],
@@ -926,7 +923,7 @@ RegisterNetEvent('unr3al_methvan:client:registerContext', function()
 			},
 		},
 	})
-end)
+end
 
 RegisterInput = function(command_name, label, input_group, key, on_press, on_release)
     RegisterCommand(on_release ~= nil and "+" .. command_name or command_name, on_press)
