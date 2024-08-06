@@ -4,7 +4,7 @@ lua54 'yes'
 
 author '1OSaft'
 description 'Advanced methcar script'
-version '2.1.4'
+version '2.1.5'
 
 dependencies {'es_extended', 'ox_lib'}
 
